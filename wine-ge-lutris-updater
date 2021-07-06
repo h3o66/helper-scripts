@@ -44,7 +44,7 @@ dstpath="${HOME}/.local/share/lutris/runners/wine/"
 if [ -d "${dstpath}" ]; then
 	cd "${dstpath}"
 	# Check if current release is already installed
-	if [ -d $(echo $filename | sed 's|\.tar\.xz||') ]; then
+	if [ -d $(echo $filename | sed 's|\.tar\.xz||' | sed 's|^wine-||') ]; then
 		echo "--> Current version is already installed. Exiting..."
 		exit 1
 	else
