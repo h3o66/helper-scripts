@@ -38,9 +38,10 @@ checksumasset=$(echo -e "${assets}" | jq -r '.[] | select(.browser_download_url 
 checksumfile=$(echo -e "${checksumasset}" | jq -r '.name')
 checksumdl=$(echo -e "${checksumasset}" | jq -r '.browser_download_url')
 
+steampath="${HOME}/.local/share/Steam"
 # Check if steam is properly installed
-if [ -d "/home/$(whoami)/.local/share/Steam" ]; then
-	cd "/home/$(whoami)/.local/share/Steam"
+if [ -d "${steampath}" ]; then
+	cd "${steampath}"
 	# Check if compatibilitytools.d folder exists, if not create one
 	if [ ! -d "compatibilitytools.d" ]; then
 		echo "--> Creating folder for Steam compatibility tools..."
@@ -78,5 +79,6 @@ if [ -d "/home/$(whoami)/.local/share/Steam" ]; then
 	fi
 else
 	echo "--> Steam does not seem to be installed. Please make sure everything is installed properly."
+	echo "Path $steampath does not exist"
 	exit 1
 fi
