@@ -1,11 +1,19 @@
 #!/bin/bash
 
+GHTOKENFILE="${HOME}/.github_token"
+
+if [ -f "${GHTOKENFILE}" ]; then
+	echo "Found tokenfile, loading"
+	source "${GHTOKENFILE}"
+	AUTHHEADER="-H 'Authorization: token ${GHTOKEN}'"
+fi
+
 baseurl="https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases"
 # if one argument given - download the specified version
 if [ $# -ge 1 ]; then
 	userinput="$1"
 	# check if the release is in the list for the download
-	releases=$(curl -s "$baseurl" | jq -r '.[].tag_name')
+	releases=$(curl $AUTHHEADER -s "$baseurl" | jq -r '.[].tag_name')
 	releasematchcount=$(echo -e "$releases" | grep -c "$userinput")
 	if [ $releasematchcount -eq 1 ]; then
 		releasename=$( echo -e "$releases" | grep "$userinput" )
@@ -21,7 +29,7 @@ else
 fi
 
 # check and download the latest release of proton-ge
-assets=$(curl -s "${releaseurl}" | jq '.assets')
+assets=$(curl -s $AUTHHEADER "${releaseurl}" | jq '.assets')
 tarasset=$(echo -e "${assets}" | jq -r '.[] | select(.browser_download_url | endswith(".tar.gz"))')
 filename=$(echo -e "${tarasset}" | jq -r '.name')
 url=$(echo -e "${tarasset}" | jq -r '.browser_download_url')
