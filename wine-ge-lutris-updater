@@ -1,0 +1,79 @@
+#!/bin/bash
+
+GHTOKENFILE="${HOME}/.github_token"
+
+if [ -f "${GHTOKENFILE}" ]; then
+	echo "Found tokenfile, loading"
+	source "${GHTOKENFILE}"
+	AUTHHEADER="-H 'Authorization: token ${GHTOKEN}'"
+fi
+
+baseurl="https://api.github.com/repos/GloriousEggroll/wine-ge-custom/releases"
+# if one argument given - download the specified version
+if [ $# -ge 1 ]; then
+	userinput="$1"
+	# check if the release is in the list for the download
+	releases=$(curl $AUTHHEADER -s "$baseurl" | jq -r '.[].tag_name')
+	releasematchcount=$(echo -e "$releases" | grep -c "$userinput")
+	if [ $releasematchcount -eq 1 ]; then
+		releasename=$( echo -e "$releases" | grep "$userinput" )
+		releaseurl="${baseurl}/tags/${releasename}"
+	else
+		echo "Input did not match a Release tag on the repo"
+		echo "Releases:"
+		echo -e "$releases"
+		exit 1
+	fi
+else
+	releaseurl="${baseurl}/latest"
+fi
+
+# check and download the latest release of proton-ge
+assets=$(curl -s $AUTHHEADER "${releaseurl}" | jq '.assets')
+tarasset=$(echo -e "${assets}" | jq -r '.[] | select(.browser_download_url | endswith(".tar.xz"))')
+filename=$(echo -e "${tarasset}" | jq -r '.name')
+url=$(echo -e "${tarasset}" | jq -r '.browser_download_url')
+
+checksumasset=$(echo -e "${assets}" | jq -r '.[] | select(.browser_download_url | endswith(".sha512sum"))')
+checksumfile=$(echo -e "${checksumasset}" | jq -r '.name')
+checksumdl=$(echo -e "${checksumasset}" | jq -r '.browser_download_url')
+
+dstpath="${HOME}/.local/share/lutris/runners/wine/"
+
+# Check if lutris runner path exists
+if [ -d "${dstpath}" ]; then
+	cd "${dstpath}"
+	# Check if current release is already installed
+	if [ -d $(echo $filename | sed 's|\.tar\.xz||') ]; then
+		echo "--> Current version is already installed. Exiting..."
+		exit 1
+	else
+		# Download latest release, extract the files and delete the archive
+		echo "--> Downloading $filename..."
+		wget -c -q --show-progress -O "${filename}" "${url}"
+		echo "--> Downloading $checksumfile..."
+		wget -q -O "${checksumfile}" "${checksumdl}"
+		# fix sha file to be able to check the downloaded file - redo the path of the file in the checksumfile
+		checksumfilepath=$(awk '{print $2}' "${checksumfile}")
+		checksumbasepath=$(basename "${checksumfilepath}")
+		if [ "$checksumfilepath" != "$checksumbasepath" ]; then
+			echo "--> fixing the path in the sha512 file to let the "
+			sed -i "s|$checksumfilepath|$checksumbasepath|" "${checksumfile}"
+		fi
+		echo "--> Checking file from checksum file"
+		sha512sum -c "${checksumfile}"
+		if [ $? -ne 0 ]; then
+			echo "Checksum check failed - please check"
+			exit 1
+		fi
+		echo "--> Extracting $filename..."
+		tar -xf "$filename"
+		echo "--> Removing the compressed archive and checksum file..."
+		rm "$filename" "$checksumfile"
+		echo "--> Done. Please check the command line for errors and restart Steam for the changes to take effect."
+	fi
+else
+	echo "--> Ltris does not seem to be installed. Please make sure everything is installed properly."
+	echo "Path: $dstpath does not exist"
+	exit 1
+fi
