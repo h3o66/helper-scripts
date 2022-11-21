@@ -15,3 +15,9 @@ https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-
 
 The token can be generated on this site:
 https://github.com/settings/tokens
+
+# subfolder nobaralinux
+
+contains some scripts related to sync / mirror files for nobara linux
+
+https://nobaraproject.org/
